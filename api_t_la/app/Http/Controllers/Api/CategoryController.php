@@ -5,10 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
-class CategoryController extends Controller {
-    public function index() {
-        $categories = Category::with('products')->get();
+class CategoryController extends Controller
+{
+    public function index()
+    {
+        $categories = Category::with('products')->get()->map(function ($category) {
+            $category->image_url = $category->image ? url('storage/' . $category->image) : null;
+            return $category;
+        });
 
         return response()->json([
             'message' => 'Categories retrieved successfully',
@@ -16,13 +22,21 @@ class CategoryController extends Controller {
         ], 200);
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $request->validate([
             'category_name' => 'required|string|max:255|unique:categories,category_name',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('categories', 'public');
+        }
 
         $category = Category::create([
             'category_name' => $request->category_name,
+            'image' => $imagePath,
         ]);
 
         return response()->json([
@@ -31,9 +45,11 @@ class CategoryController extends Controller {
         ], 201);
     }
 
-    public function show($id) {
+    public function show($id)
+    {
         // កែមកប្រើ where ជាមួយ category_id
         $category = Category::with('products')->where('category_id', $id)->firstOrFail();
+        $category->image_url = $category->image ? url('storage/' . $category->image) : null;
 
         return response()->json([
             'message' => 'Category retrieved successfully',
@@ -41,14 +57,27 @@ class CategoryController extends Controller {
         ], 200);
     }
 
-    public function update(Request $request, $id) {
+    public function update(Request $request, $id)
+    {
         // បន្ថែម category_id ក្នុង unique validation rule
         $request->validate([
             'category_name' => 'required|string|max:255|unique:categories,category_name,' . $id . ',category_id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,avif|max:2048',
         ]);
 
         $category = Category::where('category_id', $id)->firstOrFail();
-        $category->update(['category_name' => $request->category_name]);
+
+        if ($request->hasFile('image')) {
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+            $category->image = $request->file('image')->store('categories', 'public');
+        }
+
+        $category->update([
+            'category_name' => $request->category_name,
+            'image' => $category->image,
+        ]);
 
         return response()->json([
             'message' => 'Category updated successfully',
@@ -56,8 +85,14 @@ class CategoryController extends Controller {
         ], 200);
     }
 
-    public function destroy($id) {
+    public function destroy($id)
+    {
         $category = Category::where('category_id', $id)->firstOrFail();
+
+        if ($category->image) {
+            Storage::disk('public')->delete($category->image);
+        }
+
         $category->delete();
 
         return response()->json([

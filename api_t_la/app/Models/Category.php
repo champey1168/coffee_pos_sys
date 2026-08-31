@@ -12,7 +12,7 @@ class Category extends Model
     // កំណត់ Primary Key ឱ្យត្រូវនឹង Column ក្នុង Database របស់អ្នក
     protected $primaryKey = 'category_id';
 
-    protected $fillable = ['category_name'];
+    protected $fillable = ['category_name', 'image'];
 
     public function products() 
     { 

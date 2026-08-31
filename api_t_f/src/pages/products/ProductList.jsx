@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
-import { Plus, Edit, Trash2, Coffee } from 'lucide-react';
+import { Plus, Edit, Trash2, Coffee, Search, X } from 'lucide-react';
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategoryId = searchParams.get('category') || '';
 
   // Form States
   const [productName, setProductName] = useState('');
@@ -116,6 +120,27 @@ export default function ProductList() {
     }
   };
 
+  // ៦. Live Search Filtering
+  const filteredProducts = products.filter((prod) => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesCategory = activeCategoryId
+      ? String(prod.category_id || prod.category?.category_id || '') === String(activeCategoryId)
+      : true;
+    const matchesSearch = !query ||
+      (prod.product_name || prod.name || '').toLowerCase().includes(query) ||
+      (prod.category?.category_name || prod.category?.name || '').toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
+
+  const activeCategory = categories.find(
+    (cat) => String(cat.category_id || cat.id) === String(activeCategoryId)
+  );
+
+  const clearCategoryFilter = () => {
+    searchParams.delete('category');
+    setSearchParams(searchParams);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -134,6 +159,64 @@ export default function ProductList() {
         </button>
       </div>
 
+      {/* Search Bar + Category Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Live search products or categories..."
+            className="w-full border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        <select
+          value={activeCategoryId}
+          onChange={(e) => {
+            if (e.target.value) {
+              setSearchParams({ category: e.target.value });
+            } else {
+              clearCategoryFilter();
+            }
+          }}
+          className="border border-slate-200 rounded-xl px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+        >
+          <option value="">All Categories</option>
+          {categories.map((cat) => {
+            const catId = cat.category_id || cat.id;
+            return (
+              <option key={catId} value={catId}>
+                {cat.category_name || cat.name}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      {/* Active Category Indicator */}
+      {activeCategory && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+          <span className="font-medium text-amber-700">
+            Showing products in: {activeCategory.category_name || activeCategory.name}
+          </span>
+          <button
+            onClick={clearCategoryFilter}
+            className="flex items-center gap-1 text-amber-700 hover:text-amber-900 font-semibold"
+          >
+            <X size={14} /> Clear
+          </button>
+        </div>
+      )}
+
       {/* Table Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -147,8 +230,8 @@ export default function ProductList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
-            {products.length > 0 ? (
-              products.map((prod) => {
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((prod) => {
                 const prodId = prod.product_id || prod.id;
                 return (
                   <tr key={prodId} className="hover:bg-slate-50/50 transition">
@@ -198,7 +281,11 @@ export default function ProductList() {
             ) : (
               <tr>
                 <td colSpan="5" className="p-6 text-center text-slate-400">
-                  No products found.
+                  {activeCategory
+                    ? `No products found in "${activeCategory.category_name || activeCategory.name}".`
+                    : searchTerm
+                      ? `No products found matching "${searchTerm}".`
+                      : 'No products found.'}
                 </td>
               </tr>
             )}
