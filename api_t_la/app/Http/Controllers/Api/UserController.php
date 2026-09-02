@@ -21,12 +21,11 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'username'   => 'required|string|max:255|unique:users,username',
-            'full_name'  => 'required|string|max:255',
-            'password'   => 'required|string|min:6|confirmed',
-            'is_active'  => 'boolean',
-            'role_ids'   => 'required|array',
-            'role_ids.*' => 'exists:roles,role_id',
+            'username'  => 'required|string|max:255|unique:users,username',
+            'full_name' => 'required|string|max:255',
+            'password'  => 'required|string|min:6', // លុប confirmed ចេញ ប្រសិនបើ UI គ្មាន Password Confirmation
+            'is_active' => 'boolean',
+            'role_id'   => 'required|exists:roles,role_id', // ដូរមកជា ID តែមួយវិញ
         ]);
 
         $user = DB::transaction(function () use ($validated, $request) {
@@ -37,7 +36,8 @@ class UserController extends Controller
                 'is_active'     => $request->input('is_active', true),
             ]);
 
-            $user->roles()->attach($validated['role_ids']);
+            // Attaching តែមួយ Role
+            $user->roles()->attach($validated['role_id']);
 
             return $user;
         });

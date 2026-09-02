@@ -182,11 +182,13 @@ export default function PosTerminal() {
 
   return (
     <div className="flex h-full bg-slate-100 overflow-hidden relative">
-      {/* Product List */}
-      <div className="flex-1 flex flex-col p-6 overflow-y-auto space-y-6">
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+      {/* ផ្នែកខាងឆ្វេង៖ Main Menu Layout */}
+      <div className="flex-1 flex flex-col h-full p-6 overflow-hidden gap-4">
+        
+        {/* ១. Search Input (shrink-0 ការពារកុំឱ្យរួមទំហំ) */}
+        <div className="shrink-0">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Search coffee or menu..."
@@ -197,12 +199,12 @@ export default function PosTerminal() {
           </div>
         </div>
 
-        {/* Categories Bar */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {/* ២. Categories Bar (shrink-0 និង Scroll ដាច់ដោយឡែក) */}
+        <div className="shrink-0 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setSelectedCategory('ALL')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-              selectedCategory === 'ALL' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
+              selectedCategory === 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
             All Items
@@ -213,8 +215,8 @@ export default function PosTerminal() {
               <button
                 key={catId}
                 onClick={() => setSelectedCategory(catId)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  selectedCategory === catId ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
+                  selectedCategory === catId ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 {cat.category_name || cat.name}
@@ -223,13 +225,13 @@ export default function PosTerminal() {
           })}
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {/* ៣. Products Grid (flex-1 overflow-y-auto សម្រាប់ Scroll តែផ្នែក Card ប៉ុណ្ណោះ) */}
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pr-1">
           {filteredProducts.map((prod) => (
             <div
               key={prod.product_id || prod.id}
               onClick={() => openProductModal(prod)}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition cursor-pointer flex flex-col justify-between"
+              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition cursor-pointer flex flex-col justify-between h-fit"
             >
               <img
                 src={prod.image ? `http://localhost:8000/storage/${prod.image}` : 'https://placehold.co/150?text=Coffee'}
@@ -246,8 +248,8 @@ export default function PosTerminal() {
       </div>
 
       {/* Cart Summary Panel */}
-      <div className="w-96 bg-white border-l border-slate-200 flex flex-col shadow-lg">
-        <div className="p-5 border-b flex items-center justify-between">
+      <div className="w-96 bg-white border-l border-slate-200 flex flex-col shadow-lg h-full">
+        <div className="p-5 border-b flex items-center justify-between shrink-0">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <ShoppingBag className="text-emerald-600" /> Current Order
           </h2>
@@ -265,16 +267,16 @@ export default function PosTerminal() {
                 <p className="text-xs text-emerald-600 font-bold">${(item.price * item.quantity).toFixed(2)}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => updateQuantity(item.cartItemId, -1)} className="p-1 border rounded"><Minus size={14} /></button>
+                <button onClick={() => updateQuantity(item.cartItemId, -1)} className="p-1 border rounded cursor-pointer"><Minus size={14} /></button>
                 <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.cartItemId, 1)} className="p-1 border rounded"><Plus size={14} /></button>
-                <button onClick={() => removeFromCart(item.cartItemId)} className="p-1 text-rose-500"><Trash2 size={14} /></button>
+                <button onClick={() => updateQuantity(item.cartItemId, 1)} className="p-1 border rounded cursor-pointer"><Plus size={14} /></button>
+                <button onClick={() => removeFromCart(item.cartItemId)} className="p-1 text-rose-500 cursor-pointer"><Trash2 size={14} /></button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="p-5 border-t bg-slate-50 space-y-3">
+        <div className="p-5 border-t bg-slate-50 space-y-3 shrink-0">
           <div className="flex justify-between font-bold text-slate-800">
             <span>Total</span>
             <span className="text-emerald-600">${grandTotal.toFixed(2)}</span>
@@ -282,7 +284,7 @@ export default function PosTerminal() {
           <button
             onClick={handleCheckout}
             disabled={loading || cart.length === 0}
-            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <CreditCard size={18} /> {loading ? 'Processing...' : 'Place Order'}
           </button>
@@ -297,7 +299,7 @@ export default function PosTerminal() {
               <h3 className="text-lg font-bold text-slate-800">
                 {selectedProduct.product_name || selectedProduct.name}
               </h3>
-              <button onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={20} />
               </button>
             </div>
@@ -324,7 +326,7 @@ export default function PosTerminal() {
                   <button
                     key={lvl}
                     onClick={() => setSugarLevel(lvl)}
-                    className={`py-2 text-xs font-semibold rounded-lg border ${
+                    className={`py-2 text-xs font-semibold rounded-lg border cursor-pointer ${
                       sugarLevel === lvl ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600'
                     }`}
                   >
@@ -346,7 +348,7 @@ export default function PosTerminal() {
                   <button
                     key={sz.name}
                     onClick={() => setSize(sz.name)}
-                    className={`py-2 text-xs font-semibold rounded-lg border ${
+                    className={`py-2 text-xs font-semibold rounded-lg border cursor-pointer ${
                       size === sz.name ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600'
                     }`}
                   >
@@ -358,17 +360,17 @@ export default function PosTerminal() {
 
             {/* Quantity */}
             <div className="flex items-center gap-3">
-              <button onClick={() => setItemQty((prev) => Math.max(1, prev - 1))} className="p-2 border rounded"><Minus size={16} /></button>
+              <button onClick={() => setItemQty((prev) => Math.max(1, prev - 1))} className="p-2 border rounded cursor-pointer"><Minus size={16} /></button>
               <span className="font-bold text-base w-8 text-center">{itemQty}</span>
-              <button onClick={() => setItemQty((prev) => prev + 1)} className="p-2 border rounded"><Plus size={16} /></button>
+              <button onClick={() => setItemQty((prev) => prev + 1)} className="p-2 border rounded cursor-pointer"><Plus size={16} /></button>
             </div>
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setSelectedProduct(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">
+              <button onClick={() => setSelectedProduct(null)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs cursor-pointer">
                 Cancel
               </button>
-              <button onClick={handleAddToCart} className="flex-1 py-2.5 bg-emerald-700 text-white font-bold rounded-xl text-xs">
+              <button onClick={handleAddToCart} className="flex-1 py-2.5 bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer">
                 Add to Order (${(currentModalPrice * itemQty).toFixed(2)})
               </button>
             </div>
@@ -376,20 +378,18 @@ export default function PosTerminal() {
         </div>
       )}
 
-      {/* Receipt Modal Matching Design Exactly */}
+      {/* Receipt Modal */}
       {showReceipt && completedOrder && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white w-full max-w-sm p-6 rounded-3xl shadow-2xl font-mono text-slate-700 relative space-y-4">
             
-            {/* Close Button */}
             <button
               onClick={() => setShowReceipt(false)}
-              className="absolute right-5 top-5 text-slate-400 hover:text-slate-600 transition"
+              className="absolute right-5 top-5 text-slate-400 hover:text-slate-600 transition cursor-pointer"
             >
               <X size={20} />
             </button>
 
-            {/* Header */}
             <div className="text-center pt-2 space-y-1">
               <h2 className="font-bold text-xl tracking-wider text-amber-600 uppercase">
                 COFFEE POS
@@ -398,14 +398,12 @@ export default function PosTerminal() {
                 វិក្កយបត្រ / Official Receipt
               </p>
 
-              {/* Queue Number */}
               <div className="py-2">
                 <span className="text-4xl font-extrabold text-slate-800 tracking-wider">
                   {completedOrder.queueNumber}
                 </span>
               </div>
 
-              {/* Date Time */}
               <p className="text-[11px] text-slate-400 font-sans">
                 {completedOrder.date}
               </p>
@@ -413,7 +411,6 @@ export default function PosTerminal() {
 
             <div className="border-b border-dashed border-slate-300 my-2"></div>
 
-            {/* Items Table */}
             <div className="space-y-3">
               <div className="grid grid-cols-12 font-semibold text-xs text-slate-600 border-b border-slate-300 pb-2">
                 <span className="col-span-6">Item / Category</span>
@@ -441,7 +438,6 @@ export default function PosTerminal() {
 
             <div className="border-b border-dashed border-slate-300 my-2"></div>
 
-            {/* Summary Totals */}
             <div className="space-y-2 text-xs font-sans">
               <div className="flex justify-between text-slate-500 font-medium">
                 <span>សរុបចំនួន (Total Qty):</span>
@@ -467,18 +463,17 @@ export default function PosTerminal() {
 
             <div className="border-b border-dashed border-slate-300 my-2"></div>
 
-            {/* Buttons */}
             <div className="pt-2 space-y-2.5 font-sans">
               <button
                 onClick={() => window.print()}
-                className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm"
+                className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm cursor-pointer"
               >
                 <Printer size={16} /> Print Receipt
               </button>
 
               <button
                 onClick={() => setShowReceipt(false)}
-                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
               >
                 Close / បិទ
               </button>
