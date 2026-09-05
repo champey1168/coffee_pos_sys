@@ -1,6 +1,44 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Search, X, Printer } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, Trash2, CreditCard, Search, X, Printer, LayoutGrid, Coffee, CupSoda, Soup, Sandwich, Bean, IceCreamCone, CakeSlice, Tag } from 'lucide-react';
+
+const CATEGORY_ICONS = {
+  Coffee: Coffee,
+  Espresso: Coffee,
+  Latte: Coffee,
+  Tea: CupSoda,
+  'Cold Brew': CupSoda,
+  Smoothie: CupSoda,
+  Juice: CupSoda,
+  Bakery: CakeSlice,
+  Cake: CakeSlice,
+  Dessert: IceCreamCone,
+  Snack: Sandwich,
+  Sandwich: Sandwich,
+  Bean: Bean,
+  Soup: Soup,
+};
+
+const NO_SUGAR_CATEGORIES = new Set([
+  'pastries',
+  'sandwiches',
+  'breakfast',
+  'snacks',
+  'desserts',
+  'specials',
+]);
+
+const getProductCategoryName = (product) => {
+  return (
+    product?.category?.category_name ||
+    product?.category?.name ||
+    product?.category_name ||
+    ''
+  );
+};
+
+const isNoSugarProduct = (product) =>
+  NO_SUGAR_CATEGORIES.has(getProductCategoryName(product).toLowerCase());
 
 export default function PosTerminal() {
   const [products, setProducts] = useState([]);
@@ -80,12 +118,13 @@ export default function PosTerminal() {
 
     const prodId = selectedProduct.product_id || selectedProduct.id;
     const finalUnitPrice = calculateUnitPrice(selectedProduct.price, size);
+    const noSugar = isNoSugarProduct(selectedProduct);
 
     const cartItem = {
       ...selectedProduct,
       cartItemId: `${prodId}-${sugarLevel}-${size}-${Date.now()}`,
       product_id: prodId,
-      sugar_level: sugarLevel,
+      sugar_level: noSugar ? null : sugarLevel,
       size: size,
       quantity: itemQty,
       remarks: remarks,
@@ -180,6 +219,8 @@ export default function PosTerminal() {
     ? calculateUnitPrice(selectedProduct.price, size)
     : 0;
 
+  const hideSugar = selectedProduct ? isNoSugarProduct(selectedProduct) : false;
+
   return (
     <div className="flex h-full bg-slate-100 overflow-hidden relative">
       {/* ផ្នែកខាងឆ្វេង៖ Main Menu Layout */}
@@ -203,23 +244,27 @@ export default function PosTerminal() {
         <div className="shrink-0 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setSelectedCategory('ALL')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
               selectedCategory === 'ALL' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
-            All Items
+            <LayoutGrid size={16} /> All Items
           </button>
           {categories.map((cat) => {
             const catId = cat.category_id || cat.id;
+            const catName = cat.category_name?.toLowerCase() || cat.name?.toLowerCase() || '';
+            const Icon = CATEGORY_ICONS[cat.category_name || cat.name]
+              || Object.entries(CATEGORY_ICONS).find(([key]) => catName.includes(key.toLowerCase()))?.[1]
+              || Tag;
             return (
               <button
                 key={catId}
                 onClick={() => setSelectedCategory(catId)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
                   selectedCategory === catId ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                {cat.category_name || cat.name}
+                <Icon size={16} /> {cat.category_name || cat.name}
               </button>
             );
           })}
@@ -263,7 +308,10 @@ export default function PosTerminal() {
             <div key={item.cartItemId} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border">
               <div>
                 <h4 className="font-semibold text-sm">{item.product_name || item.name}</h4>
-                <p className="text-[11px] text-slate-500">{item.size} • {item.sugar_level}</p>
+                <p className="text-[11px] text-slate-500">
+                  {item.size}
+                  {item.sugar_level ? ` \u2022 ${item.sugar_level}` : ''}
+                </p>
                 <p className="text-xs text-emerald-600 font-bold">${(item.price * item.quantity).toFixed(2)}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -318,23 +366,25 @@ export default function PosTerminal() {
               </div>
             </div>
 
-            {/* Sugar Level */}
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-2">Sugar Level</label>
-              <div className="grid grid-cols-5 gap-2">
-                {['0%', '25%', '50%', '75%', '100%'].map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => setSugarLevel(lvl)}
-                    className={`py-2 text-xs font-semibold rounded-lg border cursor-pointer ${
-                      sugarLevel === lvl ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600'
-                    }`}
-                  >
-                    {lvl}
-                  </button>
-                ))}
+            {/* Sugar Level (hidden for non-drink categories) */}
+            {!hideSugar && (
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-2">Sugar Level</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {['0%', '25%', '50%', '75%', '100%'].map((lvl) => (
+                    <button
+                      key={lvl}
+                      onClick={() => setSugarLevel(lvl)}
+                      className={`py-2 text-xs font-semibold rounded-lg border cursor-pointer ${
+                        sugarLevel === lvl ? 'bg-emerald-700 text-white' : 'bg-white text-slate-600'
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Size Options */}
             <div>

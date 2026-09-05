@@ -2,10 +2,33 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import { Plus, Edit, Trash2, FolderTree, Loader2, Search, X, ArrowRight } from "lucide-react";
+import Pagination from "../../components/Pagination";
+
+const PAGE_SIZE = 10;
+
+const getInitials = (name = "") => {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const initials = (words[0]?.[0] || "") + (words[1]?.[0] || "");
+  return initials ? initials.toUpperCase() : "?";
+};
+
+function ImageWithFallback({ src, alt, initials, size = "w-10 h-10" }) {
+  const [failed, setFailed] = useState(false);
+  const base = `${size} rounded-lg ring-1 ring-slate-200 flex-shrink-0`;
+  if (!src || failed) {
+    return (
+      <span className={`${base} bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500`}>
+        {initials}
+      </span>
+    );
+  }
+  return <img src={src} alt={alt} className={`${base} object-cover`} onError={() => setFailed(true)} />;
+}
 
 export default function CategoryList() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [categoryName, setCategoryName] = useState("");
@@ -14,13 +37,19 @@ export default function CategoryList() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
 
-  // ១. Fetch Categories
+  // ១. Fetch Categories & Products
   const fetchCategories = async () => {
     try {
-      const res = await axiosClient.get("/categories");
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-      setCategories(data);
+      const [catRes, prodRes] = await Promise.all([
+        axiosClient.get("/categories"),
+        axiosClient.get("/products"),
+      ]);
+      const cats = Array.isArray(catRes.data) ? catRes.data : catRes.data.data || [];
+      const prods = Array.isArray(prodRes.data) ? prodRes.data : prodRes.data.data || [];
+      setCategories(cats);
+      setProducts(prods);
     } catch (err) {
       console.error("Error fetching categories:", err);
       if (err.response?.status !== 401) {
@@ -32,20 +61,13 @@ export default function CategoryList() {
   };
 
   useEffect(() => {
-    axiosClient
-      .get("/categories")
-      .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-        setCategories(data);
-      })
-      .catch((err) => {
-        console.error("Error fetching categories:", err);
-        if (err.response?.status !== 401) {
-          alert("Failed to load categories.");
-        }
-      })
-      .finally(() => setLoading(false));
+    fetchCategories();
   }, []);
+
+  const countProductsIn = (cat) => {
+    const catId = cat.category_id || cat.id;
+    return products.filter((p) => String(p.category_id || "") === String(catId)).length;
+  };
 
   // ២. Open Modal for Create or Edit
   const handleOpenModal = (category = null) => {
@@ -154,148 +176,199 @@ export default function CategoryList() {
     return (cat.category_name || cat.name || "").toLowerCase().includes(query);
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = filteredCategories.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredCategories.length);
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <FolderTree className="text-amber-600" /> Category Management
-          </h1>
-          <p className="text-slate-500 text-sm">
-            Manage coffee & beverage categories
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <span className="w-10 h-10 rounded-xl bg-amber-600/10 flex items-center justify-center shrink-0">
+            <FolderTree className="text-amber-600" size={22} />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 leading-tight">Category Management</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Manage coffee & beverage categories</p>
+          </div>
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-medium transition"
+          className="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm shadow-sm shadow-amber-600/20 transition"
         >
           <Plus size={18} /> Add Category
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          size={18}
-        />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Live search categories..."
-          className="w-full border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-        />
-        {searchTerm && (
-          <button
-            onClick={() => setSearchTerm("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 text-sm">
-              <th className="p-4">ID</th>
-              <th className="p-4">Image</th>
-              <th className="p-4">Category Name</th>
-              <th className="p-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
-            {loading ? (
-              <tr>
-                <td colSpan="4" className="p-6 text-center text-slate-400">
-                  <div className="flex justify-center items-center gap-2">
-                    <Loader2
-                      className="animate-spin text-amber-600"
-                      size={20}
-                    />{" "}
-                    Loading categories...
-                  </div>
-                </td>
-              </tr>
-            ) : filteredCategories.length > 0 ? (
-              filteredCategories.map((cat, index) => {
-                const catId = cat.category_id || cat.id || index + 1;
-                return (
-                  <tr key={catId} className="hover:bg-slate-50/50 transition">
-                    <td className="p-4 font-medium">#{catId}</td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => navigate(`/products?category=${catId}`)}
-                        title="View products in this category"
-                        className="block"
-                      >
-                        <img
-                          src={
-                            cat.image_url
-                              ? cat.image_url
-                              : cat.image
-                                ? cat.image.startsWith("http")
-                                  ? cat.image
-                                  : `http://127.0.0.1:8000/storage/${cat.image}`
-                                : "https://placehold.co/150?text=No+Image"
-                          }
-                          alt={cat.category_name || "Category"}
-                          className="w-12 h-12 object-cover rounded-lg border border-slate-200 hover:opacity-80 transition"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src =
-                              "https://placehold.co/150?text=No+Image";
-                          }}
-                        />
-                      </button>
-                    </td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => navigate(`/products?category=${catId}`)}
-                        className="flex items-center gap-1.5 font-semibold text-slate-800 group hover:text-amber-600 transition"
-                        title={`View products in ${cat.category_name || cat.name}`}
-                      >
-                        {cat.category_name || cat.name}
-                        <ArrowRight
-                          size={15}
-                          className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition"
-                        />
-                      </button>
-                    </td>
-                    <td className="p-4 flex justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenModal(cat)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                        title="Edit"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(cat)}
-                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan="4" className="p-6 text-center text-slate-400">
-                  {searchTerm
-                    ? `No categories found matching "${searchTerm}".`
-                    : "No categories found."}
-                </td>
-              </tr>
+      {/* Main Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-5 py-4 border-b border-slate-200">
+          <div className="relative w-full lg:max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={16}
+            />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search categories..."
+              className="w-full border border-slate-200 rounded-lg pl-9 pr-8 py-2 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500 text-sm transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={16} />
+              </button>
             )}
-          </tbody>
-        </table>
+          </div>
+          <p className="text-xs text-slate-500">
+            <span className="font-medium text-slate-700">{categories.length}</span> total categories
+          </p>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
+                <th className="px-5 py-3 font-semibold">ID</th>
+                <th className="px-5 py-3 font-semibold">Category</th>
+                <th className="px-5 py-3 font-semibold">Products</th>
+                <th className="px-5 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="px-5 py-16 text-center text-slate-400">
+                    <div className="flex justify-center items-center gap-2">
+                      <Loader2
+                        className="animate-spin text-amber-600"
+                        size={20}
+                      />{" "}
+                      Loading categories...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredCategories.length > 0 ? (
+                paginatedCategories.map((cat, index) => {
+                  const catId = cat.category_id || cat.id || index + 1;
+                  const imgSrc = cat.image_url
+                    ? cat.image_url
+                    : cat.image
+                      ? cat.image.startsWith("http")
+                        ? cat.image
+                        : `http://127.0.0.1:8000/storage/${cat.image}`
+                      : "";
+                  return (
+                    <tr key={catId} className="hover:bg-slate-50/70 transition">
+                      <td className="px-5 py-3.5">
+                        <span className="text-xs font-medium text-slate-400 tabular-nums">#{catId}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <ImageWithFallback
+                            src={imgSrc}
+                            alt={cat.category_name || "Category"}
+                            initials={getInitials(cat.category_name || cat.name)}
+                          />
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => navigate(`/products?category=${catId}`)}
+                              className="group inline-flex items-center gap-1.5 font-medium text-slate-800 hover:text-amber-600 transition"
+                              title={`View products in ${cat.category_name || cat.name}`}
+                            >
+                              <span className="truncate max-w-[240px]">{cat.category_name || cat.name}</span>
+                              <ArrowRight
+                                size={14}
+                                className="text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 tabular-nums">
+                          {countProductsIn(cat)} products
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenModal(cat)}
+                            title="Edit category"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          >
+                            <Edit size={14} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cat)}
+                            title="Delete category"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4" className="px-5 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <FolderTree className="text-slate-300" size={28} />
+                      <p className="text-sm text-slate-400">
+                        {searchTerm
+                          ? `No categories found for "${searchTerm}".`
+                          : "No categories yet."}
+                      </p>
+                      <button
+                        onClick={() => handleOpenModal()}
+                        className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:text-amber-700"
+                      >
+                        <Plus size={14} /> Add your first category
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-3 px-5 py-3.5 border-t border-slate-200 bg-slate-50/50">
+          <p className="text-xs text-slate-500">
+            Showing{' '}
+            <span className="font-medium text-slate-700">
+              {pageStart}&ndash;{pageEnd}
+            </span>{' '}
+            of <span className="font-medium text-slate-700">{filteredCategories.length}</span> categories
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setPage(1);
+                }}
+                className="ml-2 inline-flex items-center gap-1 font-medium text-amber-600 hover:text-amber-700"
+              >
+                <X size={12} /> Clear search
+              </button>
+            )}
+          </p>
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+        </div>
       </div>
 
       {/* Modal dialog for Create / Update */}
