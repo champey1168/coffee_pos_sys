@@ -287,18 +287,18 @@ export default function ProductList() {
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenModal(prod)}
                             title="Edit product"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50/60 border border-blue-100 rounded-lg shadow-sm hover:bg-blue-100 hover:border-blue-200 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
                           >
                             <Edit size={14} /> Edit
                           </button>
                           <button
                             onClick={() => handleDelete(prodId)}
                             title="Delete product"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50/60 border border-rose-100 rounded-lg shadow-sm hover:bg-rose-100 hover:border-rose-200 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-rose-200 transition"
                           >
                             <Trash2 size={14} /> Delete
                           </button>

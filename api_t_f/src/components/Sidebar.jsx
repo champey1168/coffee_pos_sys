@@ -10,12 +10,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 
-const getInitials = (name = '') => {
-  const words = name.split(/\s+/).filter(Boolean);
-  const initials = (words[0]?.[0] || '') + (words[1]?.[0] || '');
-  return initials ? initials.toUpperCase() : '?';
-};
-
 export default function Sidebar() {
   const { user } = useAuth();
   const userRoles = user?.roles || [];

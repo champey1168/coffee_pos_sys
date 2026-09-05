@@ -26,6 +26,7 @@ const NO_SUGAR_CATEGORIES = new Set([
   'snacks',
   'desserts',
   'specials',
+  'water',
 ]);
 
 const getProductCategoryName = (product) => {
@@ -37,8 +38,11 @@ const getProductCategoryName = (product) => {
   );
 };
 
-const isNoSugarProduct = (product) =>
-  NO_SUGAR_CATEGORIES.has(getProductCategoryName(product).toLowerCase());
+const isNoSugarProduct = (product) => {
+  const categoryName = getProductCategoryName(product).toLowerCase();
+  const productName = (product?.product_name || product?.name || '').toLowerCase();
+  return NO_SUGAR_CATEGORIES.has(categoryName) || productName.includes('water');
+};
 
 export default function PosTerminal() {
   const [products, setProducts] = useState([]);
