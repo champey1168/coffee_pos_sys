@@ -1,4 +1,8 @@
+# Ignore ទាំងអស់
 *
+
+# លើកលែង folder ទាំងនេះឱ្យ Git track
 !public/
-!storage/app/public/
+!storage/app/public/categories/**
+!storage/app/public/products/**
 !.gitignore
